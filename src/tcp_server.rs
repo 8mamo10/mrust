@@ -22,6 +22,6 @@ fn handler(mut stream: TcpStream) -> Result<(), failure::Error> {
             return Ok(());
         }
         print!("{}", str::from_utf8(&buffer[..nbytes])?);
-        stream.write_all(&buffer[..nbytes]);
+        stream.write_all(&buffer[..nbytes])?;
     }
 }
