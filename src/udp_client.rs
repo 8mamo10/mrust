@@ -6,6 +6,13 @@ pub fn communicate(address: &str) -> Result<(), failure::Error> {
     loop {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
+
+        // cannot send
+        // { code: 40, kind: Other, message: "Message too long" }
+        //let mut input = "a".to_string().repeat(9218);
+
+        // can send
+        //let mut input = "a".to_string().repeat(9217);
         socket
             .send_to(input.as_bytes(), address)
             .expect("failed to send data");

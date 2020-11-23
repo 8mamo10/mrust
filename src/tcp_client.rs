@@ -7,8 +7,11 @@ pub fn connect(address: &str) -> Result<(), failure::Error> {
     loop {
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        stream.write_all(input.as_bytes())?;
 
+        // can send
+        //let mut input = "a".to_string().repeat(70000);
+
+        stream.write_all(input.as_bytes())?;
         let mut reader = BufReader::new(&stream);
         let mut buffer = Vec::new();
         reader.read_until(b'\n', &mut buffer)?;
