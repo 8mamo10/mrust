@@ -3,6 +3,7 @@ use std::env;
 extern crate log;
 
 use pnet::datalink;
+use pnet::datalink::Channel::Ethernet;
 
 fn main() {
     env::set_var("RUST_LOG", "debug");
@@ -18,4 +19,10 @@ fn main() {
         .into_iter()
         .find(|iface| iface.name == *interface_name)
         .expect("Failed to get interface");
+
+    let (_tx, mut rx) = match datalink::channel(&interface, Default::default()) {
+        Ok(Ethernet(tx, rx)) => (tx, rx),
+        Ok(_) => panic!("Unhandled channel type"),
+        Err(e) => panic!("Failed to create datalink channel {}", e),
+    };
 }
