@@ -93,21 +93,21 @@ fn ipv6_handler(ethernet: &EthernetPacket) {
     }
 }
 
-fn tcp_handler(packet: &GettableEndPoints) {
+fn tcp_handler(packet: &dyn GettableEndPoints) {
     let tcp = TcpPacket::new(packet.get_payload());
     if let Some(tcp) = tcp {
         print_packet_info(packet, &tcp, "TCP");
     }
 }
 
-fn udp_handler(packet: &GettableEndPoints) {
+fn udp_handler(packet: &dyn GettableEndPoints) {
     let udp = UdpPacket::new(packet.get_payload());
     if let Some(udp) = udp {
         print_packet_info(packet, &udp, "UDP");
     }
 }
 
-fn print_packet_info(l3: &GettableEndPoints, l4: &GettableEndPoints, proto: &str) {
+fn print_packet_info(l3: &dyn GettableEndPoints, l4: &dyn GettableEndPoints, proto: &str) {
     println!(
         "Captured a {} from {}|{} to {}|{}\n",
         proto,
@@ -121,7 +121,7 @@ fn print_packet_info(l3: &GettableEndPoints, l4: &GettableEndPoints, proto: &str
     for i in 0..len {
         print!("{:<02x} ", payload[i]);
         if i % WIDTH == WIDTH - 1 || i == len - 1 {
-            for j in 0..WIDTH - 1 - (i % (WIDTH)) {
+            for _j in 0..WIDTH - 1 - (i % (WIDTH)) {
                 print!("   ");
             }
             print!("|  ");
