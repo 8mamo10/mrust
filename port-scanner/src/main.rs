@@ -1,5 +1,5 @@
 use pnet::packet::tcp;
-use std::net;
+use std::{env, net};
 
 struct PacketInfo {
     my_ipaddr: net::Ipv4Addr,
@@ -18,5 +18,7 @@ enum ScanType {
 }
 
 fn main() {
-    println!("Hello, world!");
+    env::set_var("RUST_LOG", "debug");
+    env_logger::init();
+    let args: Vec<String> = env::args().collect();
 }
