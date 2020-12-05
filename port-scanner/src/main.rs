@@ -1,7 +1,11 @@
-use pnet::packet::tcp;
+use pnet::packet::{ip, tcp};
+use pnet::transport::{self, TransportProtocol};
 use std::{collections, env, fs, net};
+
 #[macro_use]
 extern crate log;
+
+const TCP_SIZE: usize = 20;
 
 struct PacketInfo {
     my_ipaddr: net::Ipv4Addr,
@@ -56,4 +60,28 @@ fn main() {
             },
         }
     };
+    let (mut ts, mut tr) = transport::transport_channel(
+        1024,
+        transport::TransportChannelType::Layer4(TransportProtocol::Ipv4(
+            ip::IpNextHeaderProtocols::Tcp,
+        )),
+    )
+    .expect("Failed to open channel");
+}
+
+fn build_packet(packet_info: &PacketInfo) -> [u8; TCP_SIZE] {
+    let mut tcp_buffer = [0u8; TCP_SIZE];
+    let mut tcp_header = tcp::MutableTcpPacket::new(&mut tcp_buffer[..]).unwrap();
+    tcp_header.set_source(packet_info.my_port);
+
+    tcp_header.set_data_offset(5);
+    tcp_header.set_flags(packet_info.scan_type as u16);
+    let checksum = tcp::ipv4_checksum(
+        &tcp_header.to_immutable(),
+        &packet_info.my_ipaddr,
+        &packet_info.target_ipaddr,
+    );
+    tcp_header.set_checksum(checksum);
+
+    tcp_buffer
 }
