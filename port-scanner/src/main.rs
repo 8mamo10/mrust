@@ -1,11 +1,12 @@
 use pnet::packet::{ip, tcp};
 use pnet::transport::{self, TransportProtocol};
-use std::{collections, env, fs, net};
+use std::{collections, env, fs, net, thread, time};
 
 #[macro_use]
 extern crate log;
 
 const TCP_SIZE: usize = 20;
+const MAXIMUM_PORT_NUM: u16 = 1023;
 
 struct PacketInfo {
     my_ipaddr: net::Ipv4Addr,
@@ -84,4 +85,29 @@ fn build_packet(packet_info: &PacketInfo) -> [u8; TCP_SIZE] {
     tcp_header.set_checksum(checksum);
 
     tcp_buffer
+}
+
+fn send_packet(ts: &mut transport::TransportSender, packet_info: &PacketInfo) {
+    let mut packet = build_packet(packet_info);
+    for i in 1..MAXIMUM_PORT_NUM + 1 {
+        let mut tcp_header = tcp::MutableTcpPacket::new(&mut packet).unwrap();
+        register_destination_port(i, &mut tcp_header, packet_info);
+        thread::sleep(time::Duration::from_millis(5));
+        ts.send_to(tcp_header, net::IpAddr::V4(packet_info.target_ipaddr))
+            .expect("failed to send");
+    }
+}
+
+fn register_destination_port(
+    target: u16,
+    tcp_header: &mut tcp::MutableTcpPacket,
+    packet_info: &PacketInfo,
+) {
+    tcp_header.set_destination(target);
+    let checksum = tcp::ipv4_checksum(
+        &tcp_header.to_immutable(),
+        &packet_info.my_ipaddr,
+        &packet_info.target_ipaddr,
+    );
+    tcp_header.set_checksum(checksum);
 }
