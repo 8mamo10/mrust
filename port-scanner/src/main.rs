@@ -10,6 +10,7 @@ extern crate log;
 const TCP_SIZE: usize = 20;
 const MAXIMUM_PORT_NUM: u16 = 1023;
 
+#[derive(Debug)]
 struct PacketInfo {
     my_ipaddr: net::Ipv4Addr,
     target_ipaddr: net::Ipv4Addr,
@@ -17,7 +18,7 @@ struct PacketInfo {
     scan_type: ScanType,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum ScanType {
     SynScan = tcp::TcpFlags::SYN as isize,
     FinScan = tcp::TcpFlags::FIN as isize,
@@ -26,8 +27,8 @@ enum ScanType {
 }
 
 fn main() {
-    env::set_var("RUST_LOG", "debug");
-    env_logger::init();
+    // env::set_var("RUST_LOG", "debug");
+    // env_logger::init();
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
         error!("Bad number of arguments. [ipaddr][scantype]");
@@ -59,6 +60,8 @@ fn main() {
             },
         }
     };
+    println!("PacketInfo: {:?}", packet_info);
+
     let (mut ts, mut tr) = transport::transport_channel(
         1024,
         transport::TransportChannelType::Layer4(TransportProtocol::Ipv4(
@@ -102,14 +105,17 @@ fn receive_packets(tr: &mut transport::TransportReceiver, packet_info: &PacketIn
     let mut reply_ports = Vec::new();
     let mut packet_iter = transport::tcp_packet_iter(tr);
     loop {
+        println!("receiving...");
         let tcp_packet = match packet_iter.next() {
             Ok((tcp_packet, _)) => {
+                println!("Ok: receiving...");
                 if tcp_packet.get_destination() != packet_info.my_port {
                     continue;
                 }
                 tcp_packet
             }
             Err(_) => {
+                println!("Err: receiving...");
                 continue;
             }
         };
