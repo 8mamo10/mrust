@@ -1,3 +1,5 @@
+extern crate rayon;
+
 use pnet::packet::{ip, tcp};
 use pnet::transport::{self, TransportProtocol};
 use std::{collections, env, fs, net, thread, time};
@@ -12,7 +14,6 @@ struct PacketInfo {
     my_ipaddr: net::Ipv4Addr,
     target_ipaddr: net::Ipv4Addr,
     my_port: u16,
-    maximum_port: u16,
     scan_type: ScanType,
 }
 
@@ -21,7 +22,7 @@ enum ScanType {
     SynScan = tcp::TcpFlags::SYN as isize,
     FinScan = tcp::TcpFlags::FIN as isize,
     XmasScan = (tcp::TcpFlags::FIN | tcp::TcpFlags::URG | tcp::TcpFlags::PSH) as isize,
-    NullScan,
+    NullScan = 0,
 }
 
 fn main() {
@@ -46,9 +47,6 @@ fn main() {
             my_ipaddr: map["MY_IPADDR"].parse().expect("invalid ipaddr"),
             target_ipaddr: args[1].parse().expect("invalid target ipaddr"),
             my_port: map["MY_PORT"].parse().expect("invalid port number"),
-            maximum_port: map["MAXIMUM_PORT_NUM"]
-                .parse()
-                .expect("invalid maximum port number"),
             scan_type: match args[2].as_str() {
                 "sS" => ScanType::SynScan,
                 "sF" => ScanType::FinScan,
@@ -67,24 +65,12 @@ fn main() {
             ip::IpNextHeaderProtocols::Tcp,
         )),
     )
-    .expect("Failed to open channel");
-}
+    .unwrap();
 
-fn build_packet(packet_info: &PacketInfo) -> [u8; TCP_SIZE] {
-    let mut tcp_buffer = [0u8; TCP_SIZE];
-    let mut tcp_header = tcp::MutableTcpPacket::new(&mut tcp_buffer[..]).unwrap();
-    tcp_header.set_source(packet_info.my_port);
-
-    tcp_header.set_data_offset(5);
-    tcp_header.set_flags(packet_info.scan_type as u16);
-    let checksum = tcp::ipv4_checksum(
-        &tcp_header.to_immutable(),
-        &packet_info.my_ipaddr,
-        &packet_info.target_ipaddr,
+    rayon::join(
+        || send_packet(&mut ts, &packet_info),
+        || receive_packets(&mut tr, &packet_info),
     );
-    tcp_header.set_checksum(checksum);
-
-    tcp_buffer
 }
 
 fn send_packet(ts: &mut transport::TransportSender, packet_info: &PacketInfo) {
@@ -110,4 +96,67 @@ fn register_destination_port(
         &packet_info.target_ipaddr,
     );
     tcp_header.set_checksum(checksum);
+}
+
+fn receive_packets(tr: &mut transport::TransportReceiver, packet_info: &PacketInfo) {
+    let mut reply_ports = Vec::new();
+    let mut packet_iter = transport::tcp_packet_iter(tr);
+    loop {
+        let tcp_packet = match packet_iter.next() {
+            Ok((tcp_packet, _)) => {
+                if tcp_packet.get_destination() != packet_info.my_port {
+                    continue;
+                }
+                tcp_packet
+            }
+            Err(_) => {
+                continue;
+            }
+        };
+
+        let target_port = tcp_packet.get_source();
+        match packet_info.scan_type {
+            ScanType::SynScan => {
+                if tcp_packet.get_flags() == tcp::TcpFlags::SYN | tcp::TcpFlags::ACK {
+                    println!("port {} is open", target_port);
+                }
+            }
+            ScanType::FinScan | ScanType::XmasScan | ScanType::NullScan => {
+                reply_ports.push(target_port);
+            }
+        }
+        if target_port != MAXIMUM_PORT_NUM {
+            continue;
+        }
+        match packet_info.scan_type {
+            ScanType::FinScan | ScanType::XmasScan | ScanType::NullScan => {
+                for i in 1..MAXIMUM_PORT_NUM + 1 {
+                    match reply_ports.iter().find(|&&x| x == i) {
+                        None => {
+                            println!("port {} is open", i);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+        return;
+    }
+}
+
+fn build_packet(packet_info: &PacketInfo) -> [u8; TCP_SIZE] {
+    let mut tcp_buffer = [0u8; TCP_SIZE];
+    let mut tcp_header = tcp::MutableTcpPacket::new(&mut tcp_buffer[..]).unwrap();
+    tcp_header.set_source(packet_info.my_port);
+    tcp_header.set_data_offset(5);
+    tcp_header.set_flags(packet_info.scan_type as u16);
+    let checksum = tcp::ipv4_checksum(
+        &tcp_header.to_immutable(),
+        &packet_info.my_ipaddr,
+        &packet_info.target_ipaddr,
+    );
+    tcp_header.set_checksum(checksum);
+
+    return tcp_buffer;
 }
