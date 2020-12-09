@@ -2,9 +2,11 @@ extern crate mio;
 #[macro_use]
 extern crate log;
 
+use std::collections::HashMap;
+use std::io::{Read, Write};
+
 use mio::tcp::{TcpListener, TcpStream};
 use mio::*;
-use std::collections::HashMap;
 
 const SERVER: Token = Token(0);
 const WEBROOT: &str = "/webroot";
