@@ -1,12 +1,15 @@
 extern crate mio;
+extern crate regex;
 #[macro_use]
 extern crate log;
 
 use std::collections::HashMap;
-use std::io::{Read, Write};
+use std::io::{BufReader, Read, Write};
+use std::{env, fs, str};
 
 use mio::tcp::{TcpListener, TcpStream};
 use mio::*;
+use regex::Regex;
 
 const SERVER: Token = Token(0);
 const WEBROOT: &str = "/webroot";
@@ -116,8 +119,35 @@ impl WebServer {
         }
     }
     fn make_response(buffer: &[u8]) -> Result<Vec<u8>, failure::Error> {
-        // tmp
-        WebServer::create_msg_from_code(501, None)
+        let http_pattern = Regex::new(r"(.*) (.*) HTTP/1.([0-1]\r\n.*)")?;
+        let captures = match http_pattern.captures(str::from_utf8(buffer)?) {
+            Some(cap) => cap,
+            None => {
+                return WebServer::create_msg_from_code(400, None);
+            }
+        };
+        let method = captures[1].to_string();
+        let path = format!(
+            "{}{}{}",
+            env::current_dir()?.display(),
+            WEBROOT,
+            &captures[2]
+        );
+        let _version = captures[3].to_string();
+        if method == "GET" {
+            let file = match fs::File::open(path) {
+                Ok(file) => file,
+                Err(_) => {
+                    return WebServer::create_msg_from_code(404, None);
+                }
+            };
+            let mut reader = BufReader::new(file);
+            let mut buf = Vec::new();
+            reader.read_to_end(&mut buf)?;
+            WebServer::create_msg_from_code(200, Some(buf))
+        } else {
+            WebServer::create_msg_from_code(501, None)
+        }
     }
 
     fn create_msg_from_code(
