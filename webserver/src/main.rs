@@ -181,5 +181,19 @@ impl WebServer {
 }
 
 fn main() {
-    println!("Hello, world!");
+    env::set_var("RUST_LOG", "debug");
+    env_logger::init();
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        error!("wrong number of arguments.");
+        std::process::exit(1);
+    }
+    let mut server = WebServer::new(&args[1]).unwrap_or_else(|e| {
+        error!("{}", e);
+        panic!();
+    });
+    server.run().unwrap_or_else(|e| {
+        error!("{}", e);
+        panic!();
+    });
 }
