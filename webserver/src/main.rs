@@ -154,8 +154,29 @@ impl WebServer {
         status_code: u16,
         msg: Option<Vec<u8>>,
     ) -> Result<Vec<u8>, failure::Error> {
-        // tmp
-        Ok("Test".to_string().into_bytes())
+        match status_code {
+            200 => {
+                let mut header = "HTTP/1.0 200 OK\r\nServer: mio webserver\r\n\r\n"
+                    .to_string()
+                    .into_bytes();
+                if let Some(mut msg) = msg {
+                    header.append(&mut msg)
+                };
+                Ok(header)
+            }
+            400 => Ok("HTTP/1.0 400 Bad Request\r\nServer: mio webserver\r\n\r\n"
+                .to_string()
+                .into_bytes()),
+            404 => Ok("HTTP/1.0 404 Not Found\r\nServer: mio webserver\r\n\r\n"
+                .to_string()
+                .into_bytes()),
+            501 => Ok(
+                "HTTP/1.0 501 Not Impemented\r\nServer: mio webserver\r\n\r\n"
+                    .to_string()
+                    .into_bytes(),
+            ),
+            _ => Err(failure::err_msg("Undefined status_code.")),
+        }
     }
 }
 
