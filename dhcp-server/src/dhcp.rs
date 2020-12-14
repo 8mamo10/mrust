@@ -54,6 +54,47 @@ impl DhcpPacket {
         let macaddr_value = [t.0, t.1, t.2, t.3, t.4, t.5];
         self.buffer[CHADDR..CHADDR + 6].copy_from_slice(&macaddr_value);
     }
+
+    pub fn set_option(
+        &mut self,
+        cursor: &mut usize,
+        code: u8,
+        len: usize,
+        contents: Option<&[u8]>,
+    ) {
+        self.buffer[*cursor] = code;
+        if code == OPTION_END {
+            return;
+        }
+        *cursor += 1;
+        self.buffer[*cursor] = len as u8;
+        *cursor += 1;
+        if let Some(contents) = contents {
+            self.buffer[*cursor..*cursor + contents.len()].copy_from_slice(contents);
+        }
+        *cursor += len;
+    }
+
+    pub fn get_option(&self, option_code: u8) -> Option<Vec<u8>> {
+        let mut index: usize = 4;
+        let options = self.get_options();
+        while options[index] != OPTION_END {
+            if options[index] == option_code {
+                let len = options[index + 1];
+                let buf_index = index + 2;
+                let v = options[buf_index..buf_index + len as usize].to_vec();
+                return Some(v);
+            } else if options[index] == 0 {
+                index += 1;
+            } else {
+                index += 1;
+                let len = options[index];
+                index += 1;
+                index += len as usize;
+            }
+        }
+        None
+    }
 }
 
 pub struct DhcpServer {}
