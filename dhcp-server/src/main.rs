@@ -1,5 +1,5 @@
 use std::env;
-use std::net::UdpSocket;
+use std::net::{Ipv4Addr, UdpSocket};
 use std::sync::Arc;
 use std::thread;
 
@@ -10,6 +10,19 @@ use dhcp::DhcpServer;
 extern crate log;
 
 mod dhcp;
+
+const DHCP_SIZE: usize = 400;
+
+enum Code {
+    MessageType = 53,
+    IPAddressLeaseTime = 51,
+    ServerIdentifier = 54,
+    RequestedIpAddress = 50,
+    SubnetMask = 1,
+    Router = 3,
+    DNS = 6,
+    End = 255,
+}
 
 const DHCPDISCOVER: u8 = 1;
 const DHCPOFFER: u8 = 2;
@@ -67,4 +80,15 @@ fn dhcp_handler(
     dhcp_server: Arc<DhcpServer>,
 ) -> Result<(), failure::Error> {
     Err(failure::format_err!("to be implemented"))
+}
+
+fn make_dhcp_packet(
+    received_packet: &DhcpPacket,
+    dhcp_server: &Arc<DhcpServer>,
+    message_type: u8,
+    ip_to_be_leased: Ipv4Addr,
+) -> Result<DhcpPacket, failure::Error> {
+    let buffer = vec![0u8; DHCP_SIZE];
+    let mut dhcp_packet = DhcpPacket::new(buffer).unwrap();
+    Ok(dhcp_packet)
 }

@@ -3,6 +3,8 @@ use pnet::util::MacAddr;
 use std::net::Ipv4Addr;
 
 const OP: usize = 0;
+const HTYPE: usize = 1;
+const HLEN: usize = 2;
 
 const XID: usize = 4;
 const SECS: usize = 8;
