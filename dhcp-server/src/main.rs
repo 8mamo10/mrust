@@ -11,6 +11,7 @@ extern crate log;
 
 mod dhcp;
 
+const HTYPE_ETHER: u8 = 1;
 const DHCP_SIZE: usize = 400;
 
 enum Code {
@@ -90,5 +91,26 @@ fn make_dhcp_packet(
 ) -> Result<DhcpPacket, failure::Error> {
     let buffer = vec![0u8; DHCP_SIZE];
     let mut dhcp_packet = DhcpPacket::new(buffer).unwrap();
+
+    dhcp_packet.set_op(BOOTREPLY);
+    dhcp_packet.set_htype(HTYPE_ETHER);
+    dhcp_packet.set_hlen(6);
+    dhcp_packet.set_xid(received_packet.get_xid());
+    if message_type == DHCPACK {
+        dhcp_packet.set_ciaddr(received_packet.get_ciaddr());
+    }
+    dhcp_packet.set_yiaddr(ip_to_be_leased);
+    dhcp_packet.set_flags(received_packet.get_flags());
+    dhcp_packet.set_giaddr(received_packet.get_giaddr());
+    dhcp_packet.set_chaddr(received_packet.get_chaddr());
+
+    let mut cursor = dhcp::OPTIONS;
+    dhcp_packet.set_magic_cookie(&mut cursor);
+    dhcp_packet.set_option(
+        &mut cursor,
+        Code::MessageType as u8,
+        1,
+        Some(&[message_type]),
+    );
     Ok(dhcp_packet)
 }

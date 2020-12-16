@@ -47,6 +47,56 @@ impl DhcpPacket {
         &self.buffer[OPTIONS..]
     }
 
+    pub fn get_xid(&self) -> &[u8] {
+        &self.buffer[XID..SECS]
+    }
+
+    pub fn get_flags(&self) -> &[u8] {
+        &self.buffer[FLAGS..CIADDR]
+    }
+
+    pub fn get_giaddr(&self) -> Ipv4Addr {
+        let b = &self.buffer[GIADDR..CHADDR];
+        Ipv4Addr::new(b[0], b[1], b[2], b[3])
+    }
+
+    pub fn get_chaddr(&self) -> MacAddr {
+        let b = &self.buffer[CHADDR..SNAME];
+        MacAddr::new(b[0], b[1], b[2], b[3], b[4], b[5])
+    }
+    pub fn get_ciaddr(&self) -> Ipv4Addr {
+        let b = &self.buffer[CIADDR..YIADDR];
+        Ipv4Addr::new(b[0], b[1], b[2], b[3])
+    }
+
+    pub fn set_op(&mut self, op: u8) {
+        self.buffer[OP] = op;
+    }
+
+    pub fn set_htype(&mut self, htype: u8) {
+        self.buffer[HTYPE] = htype;
+    }
+
+    pub fn set_hlen(&mut self, hlen: u8) {
+        self.buffer[HLEN] = hlen;
+    }
+
+    pub fn set_xid(&mut self, xid: &[u8]) {
+        self.buffer[XID..SECS].copy_from_slice(xid);
+    }
+
+    pub fn set_ciaddr(&mut self, ciaddr: Ipv4Addr) {
+        self.buffer[CIADDR..YIADDR].copy_from_slice(&ciaddr.octets());
+    }
+
+    pub fn set_yiaddr(&mut self, yiaddr: Ipv4Addr) {
+        self.buffer[YIADDR..SIADDR].copy_from_slice(&yiaddr.octets());
+    }
+
+    pub fn set_flags(&mut self, flags: &[u8]) {
+        self.buffer[FLAGS..CIADDR].copy_from_slice(flags); // todo: ciaddr?
+    }
+
     pub fn set_giaddr(&mut self, giaddr: Ipv4Addr) {
         self.buffer[GIADDR..CHADDR].copy_from_slice(&giaddr.octets());
     }
@@ -75,6 +125,11 @@ impl DhcpPacket {
             self.buffer[*cursor..*cursor + contents.len()].copy_from_slice(contents);
         }
         *cursor += len;
+    }
+
+    pub fn set_magic_cookie(&mut self, cursor: &mut usize) {
+        self.buffer[*cursor..*cursor + 4].copy_from_slice(&[0x63, 0x82, 0x53, 0x63]);
+        *cursor += 4;
     }
 
     pub fn get_option(&self, option_code: u8) -> Option<Vec<u8>> {
