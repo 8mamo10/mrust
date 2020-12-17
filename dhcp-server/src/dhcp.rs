@@ -1,6 +1,9 @@
+use ipnetwork::Ipv4Network;
 use pnet::packet::PrimitiveValues;
 use pnet::util::MacAddr;
+use rusqlite::Connection;
 use std::net::Ipv4Addr;
+use std::sync::{Mutex, RwLock};
 
 const OP: usize = 0;
 const HTYPE: usize = 1;
@@ -154,7 +157,16 @@ impl DhcpPacket {
     }
 }
 
-pub struct DhcpServer {}
+pub struct DhcpServer {
+    address_pool: RwLock<Vec<Ipv4Addr>>,
+    pub db_connection: Mutex<Connection>,
+    pub network_addr: Ipv4Network,
+    pub server_address: Ipv4Addr,
+    pub default_gateway: Ipv4Addr,
+    pub subnet_mask: Ipv4Addr,
+    pub dns_server: Ipv4Addr,
+    pub lease_time: Vec<u8>,
+}
 
 impl DhcpServer {
     pub fn new() -> Result<DhcpServer, failure::Error> {

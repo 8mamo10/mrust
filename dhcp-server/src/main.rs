@@ -112,5 +112,36 @@ fn make_dhcp_packet(
         1,
         Some(&[message_type]),
     );
+    dhcp_packet.set_option(
+        &mut cursor,
+        Code::IPAddressLeaseTime as u8,
+        4,
+        Some(&dhcp_server.lease_time),
+    );
+    dhcp_packet.set_option(
+        &mut cursor,
+        Code::ServerIdentifier as u8,
+        4,
+        Some(&dhcp_server.server_address.octets()),
+    );
+    dhcp_packet.set_option(
+        &mut cursor,
+        Code::SubnetMask as u8,
+        4,
+        Some(&dhcp_server.subnet_mask.octets()),
+    );
+    dhcp_packet.set_option(
+        &mut cursor,
+        Code::Router as u8,
+        4,
+        Some(&dhcp_server.default_gateway.octets()),
+    );
+    dhcp_packet.set_option(
+        &mut cursor,
+        Code::DNS as u8,
+        4,
+        Some(&dhcp_server.dns_server.octets()),
+    );
+    dhcp_packet.set_option(&mut cursor, Code::End as u8, 0, None);
     Ok(dhcp_packet)
 }
