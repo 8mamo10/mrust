@@ -5,6 +5,8 @@ use rusqlite::Connection;
 use std::net::Ipv4Addr;
 use std::sync::{Mutex, RwLock};
 
+use super::util;
+
 const OP: usize = 0;
 const HTYPE: usize = 1;
 const HLEN: usize = 2;
@@ -170,6 +172,47 @@ pub struct DhcpServer {
 
 impl DhcpServer {
     pub fn new() -> Result<DhcpServer, failure::Error> {
-        Ok(DhcpServer {})
+        let env = util::load_env();
+        let static_addresses = util::optain_static_addressed(&env)?;
+        let network_addr_with_prefix: Ipv4Network = Ipv4Network::new(
+            static_addresses["network_addr"],
+            ipnetwork::ipv4_mask_to_prefix(static_addresses["subet_mask"])?,
+        )?;
+        let con = Connection::open("dhcp.db")?;
+        let addr_pool = Self::init_address_pool(&con, &static_addresses, network_addr_with_prefix)?;
+        info!(
+            "There are {} addresses in the address pool",
+            addr_pool.len()
+        );
+        let lease_time = util::make_bif_endian_vec_from_u32(
+            env.get("LEASE_TIME").expect("Miising lease_time").parse()?,
+        )?;
+        Ok(DhcpServer {
+            address_pool: RwLock::new(addr_pool),
+            db_connection: Mutex::new(con),
+            network_addr: network_addr_with_prefix,
+            server_address: static_addresses["dhcp_server_addr"],
+            default_gateway: static_addresses["default_gateway"],
+            subnet_mask: static_addresses["subnet_mask"],
+            dns_server: static_addresses["dns_addr"],
+            lease_time,
+        })
+    }
+    pub fn pick_available_ip(&self) -> Option<Ipv4Addr> {
+        let mut lock = self.address_pool.write().unwrap();
+        lock.pop()
+    }
+    pub fn pick_specified_ip(&self, requested_ip: Ipv4Addr) -> Option<Ipv4Addr> {
+        let mut lock = self.address_pool.write().unwrap();
+        for i in 0..lock.len() {
+            if lock[i] == requested_ip {
+                return Some(lock.remove(i));
+            }
+        }
+        None
+    }
+    pub fn release_address(&self, released_ip: Ipv4Addr) {
+        let mut lock = self.address_pool.write().unwrap();
+        lock.insert(0, released_ip);
     }
 }
