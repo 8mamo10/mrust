@@ -2,9 +2,11 @@ use ipnetwork::Ipv4Network;
 use pnet::packet::PrimitiveValues;
 use pnet::util::MacAddr;
 use rusqlite::Connection;
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::sync::{Mutex, RwLock};
 
+use super::database;
 use super::util;
 
 const OP: usize = 0;
@@ -214,5 +216,31 @@ impl DhcpServer {
     pub fn release_address(&self, released_ip: Ipv4Addr) {
         let mut lock = self.address_pool.write().unwrap();
         lock.insert(0, released_ip);
+    }
+    fn init_address_pool(
+        con: &Connection,
+        static_addresses: &HashMap<String, Ipv4Addr>,
+        network_addr_with_prefix: Ipv4Network,
+    ) -> Result<Vec<Ipv4Addr>, failure::Error> {
+        let network_addr = static_addresses.get("network_addr").unwrap();
+        let default_gateway = static_addresses.get("default_gateway").unwrap();
+        let dhcp_server_addr = static_addresses.get("dhcp_server_addr").unwrap();
+        let dns_server_addr = static_addresses.get("dns_server_addr").unwrap();
+        let broadcast = network_addr_with_prefix.broadcast();
+
+        let mut used_ip_addrs = database::select_addresses(con, Some(0));
+
+        used_ip_addrs.push(*network_addr);
+        used_ip_addrs.push(*default_gateway);
+        used_ip_addrs.push(*dhcp_server_addr);
+        used_ip_addrs.push(*dns_server_addr);
+        used_ip_addrs.push(broadcast);
+
+        let mut addr_pool: Vec<Ipv4Addr> = network_addr_with_prefix
+            .iter()
+            .filter(|addr| !used_ip_addrs.contains(addr))
+            .collect();
+        addr_pool.reverse();
+        Ok(addr_pool)
     }
 }
