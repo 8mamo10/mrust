@@ -175,7 +175,7 @@ pub struct DhcpServer {
 impl DhcpServer {
     pub fn new() -> Result<DhcpServer, failure::Error> {
         let env = util::load_env();
-        let static_addresses = util::optain_static_addressed(&env)?;
+        let static_addresses = util::obtain_static_addresses(&env)?;
         let network_addr_with_prefix: Ipv4Network = Ipv4Network::new(
             static_addresses["network_addr"],
             ipnetwork::ipv4_mask_to_prefix(static_addresses["subet_mask"])?,
@@ -186,7 +186,7 @@ impl DhcpServer {
             "There are {} addresses in the address pool",
             addr_pool.len()
         );
-        let lease_time = util::make_bif_endian_vec_from_u32(
+        let lease_time = util::make_big_endian_vec_from_u32(
             env.get("LEASE_TIME").expect("Miising lease_time").parse()?,
         )?;
         Ok(DhcpServer {
@@ -228,7 +228,7 @@ impl DhcpServer {
         let dns_server_addr = static_addresses.get("dns_server_addr").unwrap();
         let broadcast = network_addr_with_prefix.broadcast();
 
-        let mut used_ip_addrs = database::select_addresses(con, Some(0));
+        let mut used_ip_addrs = database::select_addresses(con, Some(0))?;
 
         used_ip_addrs.push(*network_addr);
         used_ip_addrs.push(*default_gateway);
