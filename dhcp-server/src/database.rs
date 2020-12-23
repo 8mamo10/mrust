@@ -1,3 +1,4 @@
+use pnet::util::MacAddr;
 use rusqlite::{params, Connection};
 use std::net::Ipv4Addr;
 
