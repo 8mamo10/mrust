@@ -195,7 +195,7 @@ fn dhcp_discover_message_handler(
 
     let ip_to_be_leased = select_lease_ip(&dhcp_server, &received_packet)?;
     let dhcp_packet = make_dhcp_packet(&received_packet, &dhcp_server, DHCPOFFER, ip_to_be_leased)?;
-    util::send_broadcast_response(soc, dhcp_packet.get_buffer())?;
+    util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer())?;
 
     info!("{:x}: sent DHCPOFFER", xid);
     Ok(())
@@ -234,6 +234,13 @@ fn dhcp_release_message_handler(
     Ok(())
 }
 
+fn obtain_available_ip_from_requested_option(
+    dhcp_server: &Arc<DhcpServer>,
+    received_packet: &DhcpPacket,
+) -> Option<Ipv4Addr> {
+    None
+}
+
 fn select_lease_ip(
     dhcp_server: &Arc<DhcpServer>,
     received_packet: &DhcpPacket,
@@ -242,7 +249,7 @@ fn select_lease_ip(
         let con = dhcp_server.db_connection.lock().unwrap();
         if let Some(ip_from_used) = database::select_entry(&con, received_packet.get_chaddr())? {
             if dhcp_server.network_addr.contains(ip_from_used)
-                && util::is_ipaddr_available(ip_from_used)
+                && util::is_ipaddr_available(ip_from_used).is_ok()
             {
                 return Ok(ip_from_used);
             }
