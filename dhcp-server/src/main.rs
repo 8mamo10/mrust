@@ -240,7 +240,7 @@ fn obtain_available_ip_from_requested_option(
 ) -> Option<Ipv4Addr> {
     let ip = received_packet.get_option(Code::RequestedIpAddress as u8)?;
     let requested_ip = util::u8_to_ipv4addr(&ip)?;
-    let ip_from_pool = dhcp_server.pick_specified_ip(requested_ip);
+    let ip_from_pool = dhcp_server.pick_specified_ip(requested_ip)?;
     if util::is_ipaddr_available(ip_from_pool).is_ok() {
         return Some(requested_ip);
     }

@@ -56,6 +56,14 @@ fn create_default_icmp_buffer() -> [u8; 8] {
     buf
 }
 
+pub fn u8_to_ipv4addr(buf: &[u8]) -> Option<Ipv4Addr> {
+    if buf.len() == 4 {
+        Some(Ipv4Addr::new(buf[0], buf[1], buf[2], buf[3]))
+    } else {
+        None
+    }
+}
+
 pub fn load_env() -> HashMap<String, String> {
     HashMap::new()
 }
