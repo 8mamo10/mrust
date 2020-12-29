@@ -255,7 +255,52 @@ fn dhcp_request_message_handler_to_reallocate(
     soc: &UdpSocket,
 ) -> Result<(), failure::Error> {
     info!("{:x}: received DHCPREQUEST without server_id", xid);
-    Ok(())
+
+    if let Some(requested_ip) = received_packet.get_option(Code::RequestedIpAddress as u8) {
+        debug!("client is in INIT-REBOOT");
+        let requested_ip = util::u8_to_ipv4addr(&requested_ip)
+            .ok_or_else(|| failure::err_msg("Failed to convert ip addr."))?;
+        let con = dhcp_server.db_connection.lock().unwrap();
+        match database::select_entry(&con, client_macaddr)? {
+            Some(ip) => {
+                if ip == requested_ip && dhcp_server.network_addr.contains(ip) {
+                    let dhcp_packet =
+                        make_dhcp_packet(&received_packet, &dhcp_server, DHCPACK, ip)?;
+                    util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer())?;
+                    info!("{:x}: sent DHCPACK", xid);
+                    Ok(())
+                } else {
+                    let dhcp_packet = make_dhcp_packet(
+                        &received_packet,
+                        &dhcp_server,
+                        DHCPNAK,
+                        "0.0.0.0".parse()?,
+                    )?;
+                    util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer());
+                    info!("{:x}: sent DHCPNAK", xid);
+                    Ok(())
+                }
+            }
+            None => Ok(()),
+        }
+    } else {
+        debug!("client is in RENEWING or REBINDING");
+        let ip_from_client = received_packet.get_ciaddr();
+        if !dhcp_server.network_addr.contains(ip_from_client) {
+            return Err(failure::err_msg(
+                "Invalid ciaddr, Mismatched network address.",
+            ));
+        }
+        let dhcp_packet = make_dhcp_packet(
+            &received_packet,
+            &dhcp_server,
+            DHCPACK,
+            received_packet.get_ciaddr(),
+        )?;
+        util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer());
+        info!("{:x}: sent DHCPACK", xid);
+        Ok(())
+    }
 }
 
 fn dhcp_release_message_handler(
