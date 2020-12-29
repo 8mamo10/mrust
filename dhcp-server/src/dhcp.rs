@@ -200,10 +200,12 @@ impl DhcpServer {
             lease_time,
         })
     }
+
     pub fn pick_available_ip(&self) -> Option<Ipv4Addr> {
         let mut lock = self.address_pool.write().unwrap();
         lock.pop()
     }
+
     pub fn pick_specified_ip(&self, requested_ip: Ipv4Addr) -> Option<Ipv4Addr> {
         let mut lock = self.address_pool.write().unwrap();
         for i in 0..lock.len() {
@@ -213,10 +215,12 @@ impl DhcpServer {
         }
         None
     }
+
     pub fn release_address(&self, released_ip: Ipv4Addr) {
         let mut lock = self.address_pool.write().unwrap();
         lock.insert(0, released_ip);
     }
+
     fn init_address_pool(
         con: &Connection,
         static_addresses: &HashMap<String, Ipv4Addr>,

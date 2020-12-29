@@ -310,6 +310,14 @@ fn dhcp_release_message_handler(
     client_macaddr: MacAddr,
 ) -> Result<(), failure::Error> {
     info!("{:x}: received DHCPRLEASE", xid);
+
+    let mut con = dhcp_server.db_connection.lock().unwrap();
+    let tx = con.transaction()?;
+    database::delete_entry(&tx, client_macaddr)?;
+    tx.commit()?;
+
+    debug!("{:x}: deleted from DB", xid);
+    dhcp_server.release_address(received_packet.get_ciaddr());
     Ok(())
 }
 

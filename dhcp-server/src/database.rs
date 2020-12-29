@@ -48,3 +48,7 @@ pub fn update_entry(
 ) -> Result<(), failure::Error> {
     Ok(())
 }
+
+pub fn delete_entry(tx: &Transaction, mac_addr: MacAddr) -> Result<(), failure::Error> {
+    Ok(())
+}
