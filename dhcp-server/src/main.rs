@@ -276,7 +276,7 @@ fn dhcp_request_message_handler_to_reallocate(
                         DHCPNAK,
                         "0.0.0.0".parse()?,
                     )?;
-                    util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer());
+                    util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer())?;
                     info!("{:x}: sent DHCPNAK", xid);
                     Ok(())
                 }
@@ -297,7 +297,7 @@ fn dhcp_request_message_handler_to_reallocate(
             DHCPACK,
             received_packet.get_ciaddr(),
         )?;
-        util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer());
+        util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer())?;
         info!("{:x}: sent DHCPACK", xid);
         Ok(())
     }

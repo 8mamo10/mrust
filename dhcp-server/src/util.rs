@@ -32,7 +32,7 @@ pub fn is_ipaddr_available(target_ip: Ipv4Addr) -> Result<(), failure::Error> {
                 Err(_) => {
                     info!("icmp timeout!");
                 }
-                X => {
+                _ => {
                     return;
                 }
             }

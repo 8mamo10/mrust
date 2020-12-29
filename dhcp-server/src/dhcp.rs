@@ -178,7 +178,7 @@ impl DhcpServer {
         let static_addresses = util::obtain_static_addresses(&env)?;
         let network_addr_with_prefix: Ipv4Network = Ipv4Network::new(
             static_addresses["network_addr"],
-            ipnetwork::ipv4_mask_to_prefix(static_addresses["subet_mask"])?,
+            ipnetwork::ipv4_mask_to_prefix(static_addresses["subnet_mask"])?,
         )?;
         let con = Connection::open("dhcp.db")?;
         let addr_pool = Self::init_address_pool(&con, &static_addresses, network_addr_with_prefix)?;
@@ -229,7 +229,7 @@ impl DhcpServer {
         let network_addr = static_addresses.get("network_addr").unwrap();
         let default_gateway = static_addresses.get("default_gateway").unwrap();
         let dhcp_server_addr = static_addresses.get("dhcp_server_addr").unwrap();
-        let dns_server_addr = static_addresses.get("dns_server_addr").unwrap();
+        let dns_server_addr = static_addresses.get("dns_addr").unwrap();
         let broadcast = network_addr_with_prefix.broadcast();
 
         let mut used_ip_addrs = database::select_addresses(con, Some(0))?;
