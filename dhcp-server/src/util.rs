@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::io;
-use std::net::{AddrParseError, IpAddr, Ipv4Addr, UdpSocket};
+use std::net::{AddrParseError, IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -77,5 +77,7 @@ pub fn make_big_endian_vec_from_u32(i: u32) -> Result<Vec<u8>, io::Error> {
 }
 
 pub fn send_dhcp_broadcast_response(soc: &UdpSocket, data: &[u8]) -> Result<(), failure::Error> {
+    let destination: SocketAddr = "255.255.255.68".parse()?;
+    soc.send_to(data, destination)?;
     Ok({})
 }
