@@ -210,6 +210,40 @@ fn dhcp_request_message_handler_respond_to_offer(
     server_id: Vec<u8>,
 ) -> Result<(), failure::Error> {
     info!("{:x}: received DHCPREQUEST with server_id", xid);
+
+    let server_ip = util::u8_to_ipv4addr(&server_id)
+        .ok_or_else(|| failure::err_msg("Failed to convert ip addr."))?;
+
+    if server_ip != dhcp_server.server_address {
+        info!("Client has chosen another dhcp server.");
+        return Ok(());
+    }
+
+    let ip_bin = received_packet
+        .get_option(Code::RequestedIpAddress as u8)
+        .unwrap();
+    let ip_to_be_leased = util::u8_to_ipv4addr(&ip_bin)
+        .ok_or_else(|| failure::err_msg("Failed to convert ip addr."))?;
+    let mut con = dhcp_server.db_connection.lock().unwrap();
+    let count = {
+        let tx = con.transaction()?;
+        let count = database::count_records_by_mac_addr(&tx, client_macaddr)?;
+        match count {
+            0 => database::insert_entry(&tx, client_macaddr, ip_to_be_leased)?,
+            _ => database::update_entry(&tx, client_macaddr, ip_to_be_leased, 0)?,
+        }
+        let dhcp_packet =
+            make_dhcp_packet(&received_packet, &dhcp_server, DHCPACK, ip_to_be_leased)?;
+        util::send_dhcp_broadcast_response(soc, dhcp_packet.get_buffer())?;
+        info!("{:x}: sent DHCPACK", xid);
+        tx.commit()?;
+        count
+    };
+    debug!("{:x}: leased address: {}", xid, ip_to_be_leased);
+    match count {
+        0 => debug!("{:x}: inserted into DB", xid),
+        _ => debug!("{:x}: updated DB", xid),
+    }
     Ok(())
 }
 

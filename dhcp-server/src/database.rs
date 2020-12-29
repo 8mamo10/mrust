@@ -1,5 +1,5 @@
 use pnet::util::MacAddr;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, Transaction};
 use std::net::Ipv4Addr;
 
 pub fn select_addresses(
@@ -23,4 +23,28 @@ pub fn select_entry(
         info!("specified MAC addr was not found");
         Ok(None)
     }
+}
+
+pub fn count_records_by_mac_addr(
+    con: &Connection,
+    mac_addr: MacAddr,
+) -> Result<u8, failure::Error> {
+    Ok(0)
+}
+
+pub fn insert_entry(
+    tx: &Transaction,
+    mac_addr: MacAddr,
+    ip_addr: Ipv4Addr,
+) -> Result<(), failure::Error> {
+    Ok(())
+}
+
+pub fn update_entry(
+    tx: &Transaction,
+    mac_addr: MacAddr,
+    ip_addr: Ipv4Addr,
+    deleted: u8,
+) -> Result<(), failure::Error> {
+    Ok(())
 }
