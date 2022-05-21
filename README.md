@@ -1,1 +1,1 @@
-# mrhc-rust
+# mrust
