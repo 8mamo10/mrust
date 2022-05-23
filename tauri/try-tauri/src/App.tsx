@@ -3,6 +3,7 @@ import logo from './logo.svg';
 import './App.css';
 import { invoke } from '@tauri-apps/api';
 import { open } from '@tauri-apps/api/dialog';
+import { emit } from '@tauri-apps/api/event';
 
 function App() {
 
@@ -31,6 +32,9 @@ function App() {
   function openDialog() {
     open().then(files => console.log(files))
   }
+  function emitMessage() {
+    emit('front-to-back', "hello from front")
+  }
 
   return (
     <div className="App">
@@ -44,6 +48,8 @@ function App() {
         <button onClick={executeCommands}>Click to execute command</button>
         <br />
         <button onClick={openDialog}>Click to open dialog</button>
+        <br />
+        <button onClick={emitMessage}>Click to emit message</button>
         <a
           className="App-link"
           href="https://reactjs.org"

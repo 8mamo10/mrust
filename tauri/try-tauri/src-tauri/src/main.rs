@@ -3,9 +3,19 @@
   windows_subsystem = "windows"
 )]
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 fn main() {
   tauri::Builder::default()
+    .setup(|app| {
+      app.listen_global("front-to-back", |event| {
+        println!(
+          "got front-to-back with paylot {:?}",
+          event.payload().unwrap()
+        )
+      });
+      Ok(())
+    })
     .invoke_handler(tauri::generate_handler![
       simple_command,
       command_with_message,
